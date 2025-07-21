@@ -1,0 +1,20 @@
+{
+   "author": "Snir Elgabsi",
+   "content_scripts": [ {
+      "js": [ "content.js" ],
+      "matches": [ "https://chat.openai.com/*", "https://chatgpt.com/*" ]
+   } ],
+   "description": "הוספת תפריט פרומפטים ל-ChatGPT. לחיצה על כל שורה בתפריט תגלול אל הפרומפט המבוקש. חיוני בשיחות ארוכות עם ChatGpt",
+   "host_permissions": [ "https://chat.openai.com/*" ],
+   "icons": {
+      "128": "image.png",
+      "16": "icon128.png",
+      "48": "image.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA7NFL535fsPue3eWs6uR4aEzkDltsMkKFVcF52zJVEchy0cQwYMU2oAo+EgxCKLHiAMg1EhvzICMZ6ww8zP5BHEhotVRTuGEZaA48gxdD1boNS4NPwTOLG/diJae0b8zEp1afvD88X3XSGWt9JO+bi8emRgaVmd6FCgBL1dVZxeESUAtWX1cT4MhJZGT9gf8Lo9Xm/N7rcf1vfpyqc0TJeAnVXKiuzCFwWVs3lEdHj5XhC2l/FbBsRh8lEqVlJS3ViR/eP4YCQntXrToexXf6/ECrIFYO8uVONa+kYH+qKEonlVgGRumpVGR/E/bZ97NVCWkASLPHrE8sz+1JqdeSUQIDAQAB",
+   "manifest_version": 3,
+   "name": "תפריט פרומפטים ל-ChatGPT",
+   "permissions": [  ],
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "1"
+}
