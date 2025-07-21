@@ -18,7 +18,8 @@
       user-select: none;
       z-index: 999999;
       overflow: hidden;
-      transition: max-height 0.4s ease;
+      transition: max-height 0.4s ease, box-shadow 0.4s ease;
+      border: 1px solid gray;
     }
     #floatingMenu.collapsed {
       max-height: 40px;
@@ -98,6 +99,7 @@
       cursor: pointer;
       white-space: nowrap;
       text-overflow: ellipsis;
+	  overflow-x: clip;
     }
     #floatingMenuList div:hover,
     #floatingMenuList div:focus {
@@ -127,7 +129,7 @@
 
   const title = document.createElement('div');
   title.id = 'floatingMenuTitle';
-  title.textContent = 'ריק'; // ברירת מחדל
+  title.textContent = 'ריק';
 
   const controls = document.createElement('div');
   controls.id = 'floatingMenuControls';
@@ -144,7 +146,7 @@
   closeBtn.id = 'closeBtn';
   closeBtn.textContent = '×';
 
-  controls.appendChild(toggleSearchBtn);
+  //controls.appendChild(toggleSearchBtn);
   controls.appendChild(collapseBtn);
   controls.appendChild(closeBtn);
   header.appendChild(title);
@@ -182,9 +184,11 @@
     const questions = [];
     qs.forEach((q, i) => {
       let len = 27;
-      if (hasClassOrParentHasClass(q, 'text-page-header')) return;
+      if (hasClassOrParentHasClass(q, 'text-page-header')) 
+		  return;
       let text = q.textContent.trim().replace(/\s+/g, ' ');
-      if (text.length > len) text = text.slice(0, len) + '…';
+      //if (text.length > len) 
+	  //  text = text.slice(0, len) + '…';
       questions.push({ el: q, text, index: i, fullText: q.textContent.trim() });
     });
     return questions;
@@ -204,7 +208,6 @@
       title.textContent = document.title || 'צ׳אט';
     }
 
-    // 👇 בדיקת כיוון הכותרת
     const firstChar = title.textContent.trim().charAt(0);
     if (isHebrewChar(firstChar)) {
       title.style.direction = 'rtl';
@@ -314,4 +317,17 @@
   observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
   updateList();
+
+  // בודק את מצב ה-dark class של <html> ומשנה את ה-box-shadow
+  const html = document.documentElement;
+  const updateShadow = () => {
+    if (html.classList.contains('dark')) {
+      menu.style.boxShadow = '0 0 10px white';
+    } else {
+      menu.style.boxShadow = '0 0 10px black';
+    }
+  };
+  updateShadow();
+  const htmlObserver = new MutationObserver(updateShadow);
+  htmlObserver.observe(html, { attributes: true, attributeFilter: ['class'] });
 })();
