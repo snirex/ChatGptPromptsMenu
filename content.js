@@ -1,4 +1,5 @@
 (() => {
+  // === Add main floating menu styles ===
   const style = document.createElement('style');
   style.textContent = `
     #floatingMenu {
@@ -99,7 +100,7 @@
       cursor: pointer;
       white-space: nowrap;
       text-overflow: ellipsis;
-	  overflow-x: clip;
+      overflow-x: clip;
     }
     #floatingMenuList div:hover,
     #floatingMenuList div:focus {
@@ -115,13 +116,44 @@
       overflow: hidden !important;
       transition: opacity 0.4s ease, height 0.4s ease, padding 0.4s ease, margin 0.4s ease;
     }
+
+    /* === Balloon styles === */
+    #snirBalloon {
+      position: absolute;
+      background: black;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      box-shadow: 0 0 8px white;
+      white-space: nowrap;
+      pointer-events: auto;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 1000000;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+    }
+    @keyframes bounce {
+      0%   { transform: translateY(0); }
+      30%  { transform: translateY(-10px); }
+      50%  { transform: translateY(0); }
+      70%  { transform: translateY(-5px); }
+      100% { transform: translateY(0); }
+    }
+    #snirBalloon.bounce {
+      animation: bounce 0.6s ease;
+    }
   `;
   document.head.appendChild(style);
 
+  // === Build main menu elements ===
+  const empty = 'ריק';
+  const q_menu = 'תפריט שאלות';
   const menu = document.createElement('div');
   menu.id = 'floatingMenu';
   menu.setAttribute('role', 'region');
-  menu.setAttribute('aria-label', 'תפריט שאלות');
+  menu.setAttribute('aria-label', q_menu);
 
   const header = document.createElement('div');
   header.id = 'floatingMenuHeader';
@@ -129,14 +161,10 @@
 
   const title = document.createElement('div');
   title.id = 'floatingMenuTitle';
-  title.textContent = 'ריק';
+  title.textContent = empty;
 
   const controls = document.createElement('div');
   controls.id = 'floatingMenuControls';
-
-  const toggleSearchBtn = document.createElement('button');
-  toggleSearchBtn.id = 'toggleSearchBtn';
-  toggleSearchBtn.textContent = '?';
 
   const collapseBtn = document.createElement('button');
   collapseBtn.id = 'collapseBtn';
@@ -146,7 +174,6 @@
   closeBtn.id = 'closeBtn';
   closeBtn.textContent = '×';
 
-  //controls.appendChild(toggleSearchBtn);
   controls.appendChild(collapseBtn);
   controls.appendChild(closeBtn);
   header.appendChild(title);
@@ -165,10 +192,14 @@
   menu.appendChild(listContainer);
   document.body.appendChild(menu);
 
+  // === Helper functions ===
+
+  // Check if character is Hebrew
   function isHebrewChar(char) {
     return /[\u0590-\u05FF]/.test(char);
   }
 
+  // Check if element or its parent has a given class
   function hasClassOrParentHasClass(el, className) {
     while (el) {
       if (el.classList && el.classList.contains(className)) {
@@ -179,23 +210,22 @@
     return false;
   }
 
+  // Collect all questions in page
   function getQuestions() {
     const qs = document.querySelectorAll('.whitespace-pre-wrap');
     const questions = [];
     qs.forEach((q, i) => {
-      let len = 27;
-      if (hasClassOrParentHasClass(q, 'text-page-header')) 
-		  return;
+      if (hasClassOrParentHasClass(q, 'text-page-header')) return;
       let text = q.textContent.trim().replace(/\s+/g, ' ');
-      //if (text.length > len) 
-	  //  text = text.slice(0, len) + '…';
       questions.push({ el: q, text, index: i, fullText: q.textContent.trim() });
     });
     return questions;
   }
 
+  // Keep track of previous state to detect changes
   let previousQuestionsJSON = null;
 
+  // Update the questions list
   function updateList() {
     const questions = getQuestions();
     const currentQuestionsJSON = JSON.stringify(questions.map(q => q.fullText));
@@ -203,7 +233,7 @@
     previousQuestionsJSON = currentQuestionsJSON;
 
     if (questions.length === 0) {
-      title.textContent = 'ריק';
+      title.textContent = empty;
     } else {
       title.textContent = document.title || 'צ׳אט';
     }
@@ -248,9 +278,15 @@
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         el.style.transition = 'background-color 0.5s';
         const origBG = el.style.backgroundColor;
+        const origTextColor = el.style.color;
+        const origBoxShadow = el.style.boxShadow;
         el.style.backgroundColor = 'yellow';
+        el.style.color = 'black';
+        el.style.boxShadow = '0 0 6px yellow';
         setTimeout(() => {
+          el.style.color = origTextColor || '';
           el.style.backgroundColor = origBG || '';
+          el.style.boxShadow = origBoxShadow;
         }, 1000);
       });
 
@@ -258,6 +294,7 @@
     });
   }
 
+  // === Controls actions ===
   closeBtn.addEventListener('click', () => {
     menu.style.display = 'none';
   });
@@ -267,20 +304,11 @@
     collapseBtn.textContent = isCollapsed ? '+' : '-';
   });
 
-  toggleSearchBtn.addEventListener('click', () => {
-    const visible = searchInput.classList.toggle('visible');
-    if (visible) {
-      searchInput.focus();
-    } else {
-      searchInput.value = '';
-      updateList();
-    }
-  });
-
   searchInput.addEventListener('input', () => {
     updateList();
   });
 
+  // === Dragging logic ===
   let isDragging = false, dragStartX, dragStartY, menuStartX, menuStartY;
 
   header.addEventListener('mousedown', e => {
@@ -310,24 +338,61 @@
     isDragging = false;
   });
 
+  // === Mutation observer to auto-refresh list ===
   const observer = new MutationObserver(() => {
     updateList();
   });
-
   observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-
   updateList();
 
-  // בודק את מצב ה-dark class של <html> ומשנה את ה-box-shadow
+  // === Adjust shadow if dark mode ===
   const html = document.documentElement;
   const updateShadow = () => {
     if (html.classList.contains('dark')) {
       menu.style.boxShadow = '0 0 10px white';
+      header.style.boxShadow = '0 0 6px white';
     } else {
       menu.style.boxShadow = '0 0 10px black';
+      header.style.boxShadow = '';
     }
   };
   updateShadow();
   const htmlObserver = new MutationObserver(updateShadow);
   htmlObserver.observe(html, { attributes: true, attributeFilter: ['class'] });
+
+  // === Balloon element ===
+  const balloon = document.createElement('div');
+  balloon.id = 'snirBalloon';
+  balloon.textContent = 'Snir Elgabsi';
+  document.body.appendChild(balloon);
+
+  let hideBalloonTimeout;
+
+  // Show balloon on double click
+  title.addEventListener('dblclick', () => {
+    const rect = title.getBoundingClientRect();
+    balloon.style.left = `${rect.left + rect.width / 2}px`;
+    balloon.style.top = `${rect.top - 30}px`;
+    balloon.style.opacity = '1';
+
+    balloon.classList.add('bounce');
+    setTimeout(() => balloon.classList.remove('bounce'), 600);
+
+    clearTimeout(hideBalloonTimeout);
+    hideBalloonTimeout = setTimeout(() => {
+      balloon.style.opacity = '0';
+    }, 3000);
+  });
+/*
+  // Hide balloon on mouse leave
+  title.addEventListener('mouseleave', () => {
+    balloon.style.opacity = '0';
+    clearTimeout(hideBalloonTimeout);
+  });
+*/
+  // Open blog on balloon click
+  balloon.addEventListener('click', () => {
+    window.open('https://snir.blogspot.com', '_blank');
+  });
+
 })();
