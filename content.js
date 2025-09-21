@@ -23,7 +23,7 @@
       border: 1px solid gray;
     }
     #floatingMenu.collapsed {
-      max-height: 40px;
+      max-height: 40px !important;
     }
     #floatingMenuHeader {
       padding: 8px 10px;
@@ -48,13 +48,14 @@
       font-weight: bold;
       background: none;
       border: none;
-      color: white;
+      color: #aaa; /* אפור כברירת מחדל */
       font-size: 16px;
       line-height: 1;
       padding: 0;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: color 0.3s ease; /* אנימציית fade */
     }
     #floatingMenuControls > button:focus {
       outline: 2px solid #fff;
@@ -166,6 +167,15 @@
   const controls = document.createElement('div');
   controls.id = 'floatingMenuControls';
 
+  // === Add buttons: ? , - , ×
+  const helpBtn = document.createElement('button');
+  helpBtn.id = 'helpBtn';
+  helpBtn.textContent = '?';
+  helpBtn.title = 'עזרה';
+  helpBtn.addEventListener('click', () => {
+    window.open('https://snir.blogspot.com', '_blank');
+  });
+
   const collapseBtn = document.createElement('button');
   collapseBtn.id = 'collapseBtn';
   collapseBtn.textContent = '-';
@@ -174,6 +184,8 @@
   closeBtn.id = 'closeBtn';
   closeBtn.textContent = '×';
 
+  // סדר הכפתורים: ? , - , ×
+  controls.appendChild(helpBtn);
   controls.appendChild(collapseBtn);
   controls.appendChild(closeBtn);
   header.appendChild(title);
@@ -193,24 +205,16 @@
   document.body.appendChild(menu);
 
   // === Helper functions ===
-
-  // Check if character is Hebrew
   function isHebrewChar(char) {
     return /[\u0590-\u05FF]/.test(char);
   }
-
-  // Check if element or its parent has a given class
   function hasClassOrParentHasClass(el, className) {
     while (el) {
-      if (el.classList && el.classList.contains(className)) {
-        return true;
-      }
+      if (el.classList && el.classList.contains(className)) return true;
       el = el.parentElement;
     }
     return false;
   }
-
-  // Collect all questions in page
   function getQuestions() {
     const qs = document.querySelectorAll('.whitespace-pre-wrap');
     const questions = [];
@@ -222,32 +226,31 @@
     return questions;
   }
 
-  // Keep track of previous state to detect changes
   let previousQuestionsJSON = null;
 
-  // Update the questions list
+  function animateMenuHeight() {
+    if (menu.classList.contains("collapsed")) return;
+    const currentHeight = menu.offsetHeight;
+    menu.style.maxHeight = "none";
+    const newHeight = Math.min(menu.scrollHeight, 400);
+    menu.style.maxHeight = currentHeight + "px";
+    void menu.offsetHeight;
+    menu.style.transition = "max-height 0.4s ease";
+    menu.style.maxHeight = newHeight + "px";
+  }
+
   function updateList() {
     const questions = getQuestions();
     const currentQuestionsJSON = JSON.stringify(questions.map(q => q.fullText));
     if (currentQuestionsJSON === previousQuestionsJSON) return;
     previousQuestionsJSON = currentQuestionsJSON;
 
-    if (questions.length === 0) {
-      title.textContent = empty;
-    } else {
-      title.textContent = document.title || 'צ׳אט';
-    }
-
+    title.textContent = questions.length === 0 ? empty : document.title || 'צ׳אט';
     const firstChar = title.textContent.trim().charAt(0);
-    if (isHebrewChar(firstChar)) {
-      title.style.direction = 'rtl';
-    } else {
-      title.style.direction = 'ltr';
-    }
+    title.style.direction = isHebrewChar(firstChar) ? 'rtl' : 'ltr';
 
     const searchTerm = searchInput.value.trim().toLowerCase();
     listContainer.innerHTML = '';
-
     const filtered = questions.filter(q => q.fullText.toLowerCase().includes(searchTerm));
     listContainer.classList.toggle('scrollable', filtered.length > 10);
 
@@ -257,6 +260,7 @@
       noResultDiv.style.textAlign = 'center';
       noResultDiv.style.opacity = '0.7';
       listContainer.appendChild(noResultDiv);
+      animateMenuHeight();
       return;
     }
 
@@ -292,25 +296,31 @@
 
       listContainer.appendChild(item);
     });
+
+    animateMenuHeight();
   }
 
   // === Controls actions ===
-  closeBtn.addEventListener('click', () => {
-    menu.style.display = 'none';
-  });
-
+  closeBtn.addEventListener('click', () => { menu.style.display = 'none'; });
   collapseBtn.addEventListener('click', () => {
     const isCollapsed = menu.classList.toggle('collapsed');
     collapseBtn.textContent = isCollapsed ? '+' : '-';
   });
+  searchInput.addEventListener('input', updateList);
 
-  searchInput.addEventListener('input', () => {
-    updateList();
+  // === Buttons hover effect on header ===
+  const buttons = [helpBtn, collapseBtn, closeBtn];
+  const defaultBtnColor = '#aaa';
+  const hoverBtnColor = 'white';
+  header.addEventListener('mouseenter', () => {
+    buttons.forEach(btn => btn.style.color = hoverBtnColor);
+  });
+  header.addEventListener('mouseleave', () => {
+    buttons.forEach(btn => btn.style.color = defaultBtnColor);
   });
 
   // === Dragging logic ===
   let isDragging = false, dragStartX, dragStartY, menuStartX, menuStartY;
-
   header.addEventListener('mousedown', e => {
     isDragging = true;
     dragStartX = e.clientX;
@@ -320,7 +330,6 @@
     menuStartY = rect.top;
     e.preventDefault();
   });
-
   window.addEventListener('mousemove', e => {
     if (!isDragging) return;
     let newX = menuStartX + (e.clientX - dragStartX);
@@ -333,19 +342,14 @@
     menu.style.left = `${newX}px`;
     menu.style.top = `${newY}px`;
   });
+  window.addEventListener('mouseup', () => { isDragging = false; });
 
-  window.addEventListener('mouseup', () => {
-    isDragging = false;
-  });
-
-  // === Mutation observer to auto-refresh list ===
-  const observer = new MutationObserver(() => {
-    updateList();
-  });
+  // === Mutation observer ===
+  const observer = new MutationObserver(updateList);
   observer.observe(document.body, { childList: true, subtree: true, characterData: true });
   updateList();
 
-  // === Adjust shadow if dark mode ===
+  // === Dark mode shadow ===
   const html = document.documentElement;
   const updateShadow = () => {
     if (html.classList.contains('dark')) {
@@ -367,30 +371,16 @@
   document.body.appendChild(balloon);
 
   let hideBalloonTimeout;
-
-  // Show balloon on double click
   title.addEventListener('dblclick', () => {
     const rect = title.getBoundingClientRect();
     balloon.style.left = `${rect.left + rect.width / 2}px`;
     balloon.style.top = `${rect.top - 30}px`;
     balloon.style.opacity = '1';
-
     balloon.classList.add('bounce');
     setTimeout(() => balloon.classList.remove('bounce'), 600);
-
     clearTimeout(hideBalloonTimeout);
-    hideBalloonTimeout = setTimeout(() => {
-      balloon.style.opacity = '0';
-    }, 3000);
+    hideBalloonTimeout = setTimeout(() => { balloon.style.opacity = '0'; }, 3000);
   });
-/*
-  // Hide balloon on mouse leave
-  title.addEventListener('mouseleave', () => {
-    balloon.style.opacity = '0';
-    clearTimeout(hideBalloonTimeout);
-  });
-*/
-  // Open blog on balloon click
   balloon.addEventListener('click', () => {
     window.open('https://snir.blogspot.com', '_blank');
   });
