@@ -1,388 +1,322 @@
 (() => {
-  // === Add main floating menu styles ===
-  const style = document.createElement('style');
-  style.textContent = `
-    #floatingMenu {
-      position: fixed;
-      top: 100px;
-      right: 10px;
-      width: 270px;
-      max-height: 400px;
-      background: rgba(0,0,0,0.6);
-      color: white;
-      font-family: Arial, sans-serif;
-      font-size: 14px;
-      border-radius: 6px;
-      box-shadow: 0 0 10px black;
-      display: flex;
-      flex-direction: column;
-      user-select: none;
-      z-index: 999999;
-      overflow: hidden;
-      transition: max-height 0.4s ease, box-shadow 0.4s ease;
-      border: 1px solid gray;
-    }
-    #floatingMenu.collapsed {
-      max-height: 40px !important;
-    }
-    #floatingMenuHeader {
-      padding: 8px 10px;
-      background: rgba(0,0,0,0.8);
-      cursor: move;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-weight: bold;
-    }
-    #floatingMenuTitle {
-      flex-grow: 1;
-      text-align: center;
-    }
-    #floatingMenuControls {
-      display: flex;
-      align-items: center;
-    }
-    #floatingMenuControls > button {
-      cursor: pointer;
-      margin-left: 10px;
-      font-weight: bold;
-      background: none;
-      border: none;
-      color: #aaa; /* אפור כברירת מחדל */
-      font-size: 16px;
-      line-height: 1;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: color 0.3s ease; /* אנימציית fade */
-    }
-    #floatingMenuControls > button:focus {
-      outline: 2px solid #fff;
-      outline-offset: 2px;
-    }
-    #searchInput {
-      margin: 0 10px;
-      padding: 5px 8px;
-      border-radius: 4px;
-      border: none;
-      font-size: 14px;
-      width: calc(100% - 20px);
-      box-sizing: border-box;
-      max-height: 0;
-      opacity: 0;
-      pointer-events: none;
-      transition: max-height 0.4s ease, opacity 0.4s ease, margin 0.4s ease;
-      direction: rtl;
-    }
-    #searchInput.visible {
-      max-height: 40px;
-      opacity: 1;
-      pointer-events: auto;
-      margin: 5px 10px;
-    }
-    #floatingMenuList {
-      padding: 5px 10px;
-      transition: opacity 0.3s ease;
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    #floatingMenuList.scrollable {
-      overflow-y: auto;
-      max-height: 340px;
-    }
-    #floatingMenuList div {
-      padding: 5px 8px;
-      border-radius: 4px;
-      margin-bottom: 4px;
-      background: rgba(255,255,255,0.1);
-      cursor: pointer;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      overflow-x: clip;
-    }
-    #floatingMenuList div:hover,
-    #floatingMenuList div:focus {
-      background: rgba(255,255,255,0.25);
-      outline: none;
-    }
-    #floatingMenu.collapsed #searchInput,
-    #floatingMenu.collapsed #floatingMenuList {
-      opacity: 0;
-      pointer-events: none;
-      height: 0;
-      padding: 0 10px;
-      overflow: hidden !important;
-      transition: opacity 0.4s ease, height 0.4s ease, padding 0.4s ease, margin 0.4s ease;
-    }
+    /** --- יצירת סגנונות --- */
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+        #floatingMenu {
+            position: fixed;
+            top: 100px;
+            right: 10px;
+            width: 300px;
+            max-height: 450px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            border-radius: 6px;
+            box-shadow: 0 0 12px black;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+            z-index: 999999;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+        #floatingMenu.collapsed { max-height: 40px; }
+        #floatingMenuHeader {
+            padding: 8px 10px;
+            background: rgba(0,0,0,0.85);
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+        #floatingMenuTitle { flex-grow: 1; }
+        #floatingMenuControls { display: flex; align-items: center; }
+        #floatingMenuControls > button:not(.keyboard-toggle) {
+            cursor: pointer; color: white; margin-left: 6px;
+            font-weight: bold; user-select: none;
+            background: none; border: none;
+            font-size: 16px; line-height: 1; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #floatingMenuControls > .keyboard-toggle {
+            cursor: pointer; color: white; font-size: 16px;
+            line-height: 1; padding: 4px 6px; border-radius: 4px;
+            transition: background 0.3s ease; margin-left: 6px;
+        }
+        #floatingMenuControls > .keyboard-toggle.on { background: #2ecc71; }
+        #floatingMenuControls > .keyboard-toggle.off { background: #7f8c8d; }
 
-    /* === Balloon styles === */
-    #snirBalloon {
-      position: absolute;
-      background: black;
-      color: white;
-      padding: 6px 12px;
-      border-radius: 6px;
-      box-shadow: 0 0 8px white;
-      white-space: nowrap;
-      pointer-events: auto;
-      cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      z-index: 1000000;
-      font-family: Arial, sans-serif;
-      font-size: 12px;
-    }
-    @keyframes bounce {
-      0%   { transform: translateY(0); }
-      30%  { transform: translateY(-10px); }
-      50%  { transform: translateY(0); }
-      70%  { transform: translateY(-5px); }
-      100% { transform: translateY(0); }
-    }
-    #snirBalloon.bounce {
-      animation: bounce 0.6s ease;
-    }
-  `;
-  document.head.appendChild(style);
+        #searchInput {
+            margin: 3px 10px; padding: 5px 8px; border-radius: 4px;
+            border: none; font-size: 14px; width: calc(100% - 20px);
+            box-sizing: border-box; direction: rtl;
+        }
+        #floatingMenuList {
+            padding: 5px 10px;
+            transition: opacity 0.4s ease;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #floatingMenuList.fade { opacity: 0; }
+        #floatingMenuList.scrollable {
+            overflow-y: auto;
+            max-height: 380px;
+        }
+        #floatingMenuList div {
+            padding: 5px 8px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            background: rgba(255,255,255,0.1);
+            cursor: pointer;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow-x: hidden;
+            max-width: 100%;
+            box-sizing: border-box;
+            transition: background 0.25s ease, color 0.25s ease;
+        }
+        #floatingMenuList div:hover { background: rgba(255,255,255,0.25); }
+        #highlight { background: yellow; color: black; font-weight: bold; }
+        #floatingMenu.collapsed #searchInput,
+        #floatingMenu.collapsed #floatingMenuList {
+            opacity: 0; pointer-events: none; height: 0; padding: 0 10px;
+            overflow: hidden !important;
+            transition: opacity 0.4s ease, height 0.4s ease, padding 0.4s ease, margin 0.4s ease;
+        }
+        #floatingMenuList .active {
+            background: orange !important; color: black !important; transform: scale(1.02);
+        }
+    `;
+    document.head.appendChild(styleElement);
 
-  // === Build main menu elements ===
-  const empty = 'ריק';
-  const q_menu = 'תפריט שאלות';
-  const menu = document.createElement('div');
-  menu.id = 'floatingMenu';
-  menu.setAttribute('role', 'region');
-  menu.setAttribute('aria-label', q_menu);
+    /** --- מבנה התפריט --- */
+    const floatingMenu = document.createElement('div');
+    floatingMenu.id = 'floatingMenu';
 
-  const header = document.createElement('div');
-  header.id = 'floatingMenuHeader';
-  header.setAttribute('role', 'banner');
+    const header = document.createElement('div');
+    header.id = 'floatingMenuHeader';
 
-  const title = document.createElement('div');
-  title.id = 'floatingMenuTitle';
-  title.textContent = empty;
+    const title = document.createElement('div');
+    title.id = 'floatingMenuTitle';
+    title.textContent = 'פוסטים';
 
-  const controls = document.createElement('div');
-  controls.id = 'floatingMenuControls';
+    const controls = document.createElement('div');
+    controls.id = 'floatingMenuControls';
 
-  // === Add buttons: ? , - , ×
-  const helpBtn = document.createElement('button');
-  helpBtn.id = 'helpBtn';
-  helpBtn.textContent = '?';
-  helpBtn.title = 'עזרה';
-  helpBtn.addEventListener('click', () => {
-    window.open('https://snir.blogspot.com', '_blank');
-  });
+    const collapseButton = document.createElement('button');
+    collapseButton.textContent = '-';
 
-  const collapseBtn = document.createElement('button');
-  collapseBtn.id = 'collapseBtn';
-  collapseBtn.textContent = '-';
+    const closeButton = document.createElement('button');
+    closeButton.textContent = '×';
 
-  const closeBtn = document.createElement('button');
-  closeBtn.id = 'closeBtn';
-  closeBtn.textContent = '×';
+    const keyboardToggleButton = document.createElement('button');
+    keyboardToggleButton.textContent = '↕';
+    keyboardToggleButton.classList.add('keyboard-toggle', 'on');
 
-  // סדר הכפתורים: ? , - , ×
-  controls.appendChild(helpBtn);
-  controls.appendChild(collapseBtn);
-  controls.appendChild(closeBtn);
-  header.appendChild(title);
-  header.appendChild(controls);
+    controls.appendChild(collapseButton);
+    controls.appendChild(closeButton);
+    controls.appendChild(keyboardToggleButton);
 
-  const searchInput = document.createElement('input');
-  searchInput.id = 'searchInput';
-  searchInput.type = 'search';
-  searchInput.placeholder = 'חפש שאלות...';
+    header.appendChild(title);
+    header.appendChild(controls);
 
-  const listContainer = document.createElement('div');
-  listContainer.id = 'floatingMenuList';
+    const searchInput = document.createElement('input');
+    searchInput.id = 'searchInput';
+    searchInput.placeholder = 'חפש פוסטים...';
 
-  menu.appendChild(header);
-  menu.appendChild(searchInput);
-  menu.appendChild(listContainer);
-  document.body.appendChild(menu);
+    const postsListContainer = document.createElement('div');
+    postsListContainer.id = 'floatingMenuList';
 
-  // === Helper functions ===
-  function isHebrewChar(char) {
-    return /[\u0590-\u05FF]/.test(char);
-  }
-  function hasClassOrParentHasClass(el, className) {
-    while (el) {
-      if (el.classList && el.classList.contains(className)) return true;
-      el = el.parentElement;
-    }
-    return false;
-  }
-  function getQuestions() {
-    const qs = document.querySelectorAll('.whitespace-pre-wrap');
-    const questions = [];
-    qs.forEach((q, i) => {
-      if (hasClassOrParentHasClass(q, 'text-page-header')) return;
-      let text = q.textContent.trim().replace(/\s+/g, ' ');
-      questions.push({ el: q, text, index: i, fullText: q.textContent.trim() });
-    });
-    return questions;
-  }
+    floatingMenu.appendChild(header);
+    floatingMenu.appendChild(searchInput);
+    floatingMenu.appendChild(postsListContainer);
+    document.body.appendChild(floatingMenu);
 
-  let previousQuestionsJSON = null;
+    /** --- משתנים --- */
+    let keyboardNavigationEnabled = true;
+    let activePostIndex = -1;
+    let currentChatRoot = null;
 
-  function animateMenuHeight() {
-    if (menu.classList.contains("collapsed")) return;
-    const currentHeight = menu.offsetHeight;
-    menu.style.maxHeight = "none";
-    const newHeight = Math.min(menu.scrollHeight, 400);
-    menu.style.maxHeight = currentHeight + "px";
-    void menu.offsetHeight;
-    menu.style.transition = "max-height 0.4s ease";
-    menu.style.maxHeight = newHeight + "px";
-  }
+    /** --- פונקציות עזר --- */
+    function isHebrew(text) { return /[\u0590-\u05FF]/.test(text); }
+    function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-  function updateList() {
-    const questions = getQuestions();
-    const currentQuestionsJSON = JSON.stringify(questions.map(q => q.fullText));
-    if (currentQuestionsJSON === previousQuestionsJSON) return;
-    previousQuestionsJSON = currentQuestionsJSON;
-
-    title.textContent = questions.length === 0 ? empty : document.title || 'צ׳אט';
-    const firstChar = title.textContent.trim().charAt(0);
-    title.style.direction = isHebrewChar(firstChar) ? 'rtl' : 'ltr';
-
-    const searchTerm = searchInput.value.trim().toLowerCase();
-    listContainer.innerHTML = '';
-    const filtered = questions.filter(q => q.fullText.toLowerCase().includes(searchTerm));
-    listContainer.classList.toggle('scrollable', filtered.length > 10);
-
-    if (filtered.length === 0) {
-      const noResultDiv = document.createElement('div');
-      noResultDiv.textContent = 'לא נמצאו שאלות';
-      noResultDiv.style.textAlign = 'center';
-      noResultDiv.style.opacity = '0.7';
-      listContainer.appendChild(noResultDiv);
-      animateMenuHeight();
-      return;
+    function getCurrentChatRoot() {
+        const allChats = document.querySelectorAll('main');
+        if (!allChats.length) return null;
+        let visibleChat = null;
+        allChats.forEach(chat => {
+            const rect = chat.getBoundingClientRect();
+            if (rect.height > 200 && rect.bottom > 100) visibleChat = chat;
+        });
+        return visibleChat;
     }
 
-    filtered.forEach(({ el, text, index, fullText }) => {
-      const item = document.createElement('div');
-      item.textContent = text || `שאלה ${index + 1}`;
-      item.title = fullText;
+    function getPosts() {
+        const chatRoot = getCurrentChatRoot();
+        if (!chatRoot) return [];
+        const postElements = chatRoot.querySelectorAll('.whitespace-pre-wrap');
+        return Array.from(postElements).map((el, index) => {
+            const link = el.querySelector('a');
+            const text = link ? link.textContent.trim() : el.textContent.trim();
+            return { element: el, text, index };
+        });
+    }
 
-      if (isHebrewChar(text[0])) {
-        item.style.direction = 'rtl';
-        item.style.textAlign = 'right';
-      } else {
-        item.style.direction = 'ltr';
-        item.style.textAlign = 'left';
-      }
+    function highlightText(text, searchTerm) {
+        if (!searchTerm) return text;
+        const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+        return text.replace(regex, '<span id="highlight">$1</span>');
+    }
 
-      item.addEventListener('click', e => {
-        e.preventDefault();
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.style.transition = 'background-color 0.5s';
-        const origBG = el.style.backgroundColor;
-        const origTextColor = el.style.color;
-        const origBoxShadow = el.style.boxShadow;
-        el.style.backgroundColor = 'yellow';
-        el.style.color = 'black';
-        el.style.boxShadow = '0 0 6px yellow';
+    function highlightPost(postElement) {
+        postElement.style.transition = 'background-color 1.5s ease';
+        postElement.style.backgroundColor = 'yellow';
+        setTimeout(() => postElement.style.backgroundColor = '', 1500);
+    }
+
+    /** --- בניית רשימת פוסטים --- */
+    function updatePostsList(focusLast = false) {
+        const searchTerm = searchInput.value.trim().toLowerCase();
+        const allPosts = getPosts();
+
+        postsListContainer.classList.add('fade');
         setTimeout(() => {
-          el.style.color = origTextColor || '';
-          el.style.backgroundColor = origBG || '';
-          el.style.boxShadow = origBoxShadow;
-        }, 1000);
-      });
+            postsListContainer.innerHTML = '';
+            const filteredPosts = allPosts.filter(p => p.text.toLowerCase().includes(searchTerm));
+            postsListContainer.classList.toggle('scrollable', filteredPosts.length > 10);
 
-      listContainer.appendChild(item);
+            if (!filteredPosts.length) {
+                const noResultElement = document.createElement('div');
+                noResultElement.textContent = 'לא נמצאו פוסטים';
+                noResultElement.style.textAlign = 'center';
+                noResultElement.style.opacity = '0.7';
+                postsListContainer.appendChild(noResultElement);
+            } else {
+                filteredPosts.forEach(({ element, text }, i) => {
+                    const postItem = document.createElement('div');
+                    postItem.innerHTML = highlightText(text, searchTerm);
+                    postItem.style.textAlign = isHebrew(text[0]) ? 'right' : 'left';
+                    postItem.style.direction = isHebrew(text[0]) ? 'rtl' : 'ltr';
+                    postItem.addEventListener('click', () => {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        highlightPost(element);
+                        activePostIndex = i;
+                        updateActiveClass(postsListContainer.querySelectorAll('div'));
+                    });
+                    postsListContainer.appendChild(postItem);
+                });
+            }
+
+            activePostIndex = focusLast && filteredPosts.length > 0 ? filteredPosts.length - 1 : 0;
+            updateActiveClass(postsListContainer.querySelectorAll('div'));
+        }, 150);
+        setTimeout(() => postsListContainer.classList.remove('fade'), 250);
+    }
+
+    /** --- עדכון לפי גלילה --- */
+    function updateActivePost() {
+        const allPosts = getPosts();
+        const searchTerm = searchInput.value.trim().toLowerCase();
+        const filteredPosts = allPosts.filter(p => p.text.toLowerCase().includes(searchTerm));
+        if (!filteredPosts.length) return;
+
+        const viewportMiddle = window.innerHeight / 2;
+        let closestIndex = -1;
+        let minDistance = Infinity;
+        filteredPosts.forEach((p, index) => {
+            const rect = p.element.getBoundingClientRect();
+            const distance = Math.abs(rect.top + rect.height / 2 - viewportMiddle);
+            if (distance < minDistance) { minDistance = distance; closestIndex = index; }
+        });
+        if (closestIndex === -1) return;
+        activePostIndex = closestIndex;
+        const postItems = postsListContainer.querySelectorAll('div');
+        updateActiveClass(postItems);
+    }
+
+    function updateActiveClass(postItems) {
+        postItems.forEach((item, index) => {
+            item.classList.toggle('active', index === activePostIndex);
+            if (index === activePostIndex)
+                item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        });
+    }
+
+    /** --- אירועים --- */
+    collapseButton.addEventListener('click', () => floatingMenu.classList.toggle('collapsed'));
+    closeButton.addEventListener('click', () => floatingMenu.remove());
+    searchInput.addEventListener('input', () => updatePostsList());
+    window.addEventListener('scroll', updateActivePost);
+
+    keyboardToggleButton.addEventListener('click', () => {
+        keyboardNavigationEnabled = !keyboardNavigationEnabled;
+        keyboardToggleButton.classList.toggle('on', keyboardNavigationEnabled);
+        keyboardToggleButton.classList.toggle('off', !keyboardNavigationEnabled);
     });
 
-    animateMenuHeight();
-  }
+    /** --- ניווט מקלדת --- */
+    window.addEventListener('keydown', (event) => {
+        if (!keyboardNavigationEnabled) return;
+        const postItems = postsListContainer.querySelectorAll('div');
+        if (!postItems.length) return;
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            activePostIndex = (activePostIndex + 1) % postItems.length;
+            updateActiveClass(postItems);
+        }
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            activePostIndex = (activePostIndex - 1 + postItems.length) % postItems.length;
+            updateActiveClass(postItems);
+        }
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            const posts = getPosts();
+            const searchTerm = searchInput.value.trim().toLowerCase();
+            const filtered = posts.filter(p => p.text.toLowerCase().includes(searchTerm));
+            if (filtered[activePostIndex]) {
+                const el = filtered[activePostIndex].element;
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                highlightPost(el);
+            }
+        }
+    });
 
-  // === Controls actions ===
-  closeBtn.addEventListener('click', () => { menu.style.display = 'none'; });
-  collapseBtn.addEventListener('click', () => {
-    const isCollapsed = menu.classList.toggle('collapsed');
-    collapseBtn.textContent = isCollapsed ? '+' : '-';
-  });
-  searchInput.addEventListener('input', updateList);
+    /** --- גרירה --- */
+    let isDragging = false, startX, startY, menuX, menuY;
+    header.addEventListener('mousedown', e => {
+        isDragging = true; startX = e.clientX; startY = e.clientY;
+        const rect = floatingMenu.getBoundingClientRect();
+        menuX = rect.left; menuY = rect.top; e.preventDefault();
+    });
+    window.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        let newX = menuX + (e.clientX - startX);
+        let newY = menuY + (e.clientY - startY);
+        newX = Math.max(0, Math.min(newX, window.innerWidth - floatingMenu.offsetWidth));
+        newY = Math.max(0, Math.min(newY, window.innerHeight - floatingMenu.offsetHeight));
+        floatingMenu.style.left = newX + 'px';
+        floatingMenu.style.top = newY + 'px';
+        floatingMenu.style.right = 'auto';
+    });
+    window.addEventListener('mouseup', () => isDragging = false);
 
-  // === Buttons hover effect on header ===
-  const buttons = [helpBtn, collapseBtn, closeBtn];
-  const defaultBtnColor = '#aaa';
-  const hoverBtnColor = 'white';
-  header.addEventListener('mouseenter', () => {
-    buttons.forEach(btn => btn.style.color = hoverBtnColor);
-  });
-  header.addEventListener('mouseleave', () => {
-    buttons.forEach(btn => btn.style.color = defaultBtnColor);
-  });
+    /** --- האזנה לשינוי צ'אט --- */
+    const chatObserver = new MutationObserver(() => {
+        const chatRoot = getCurrentChatRoot();
+        if (chatRoot !== currentChatRoot) {
+            currentChatRoot = chatRoot;
+            setTimeout(() => updatePostsList(true), 400);
+        }
+    });
+    chatObserver.observe(document.body, { childList: true, subtree: true });
 
-  // === Dragging logic ===
-  let isDragging = false, dragStartX, dragStartY, menuStartX, menuStartY;
-  header.addEventListener('mousedown', e => {
-    isDragging = true;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
-    const rect = menu.getBoundingClientRect();
-    menuStartX = rect.left;
-    menuStartY = rect.top;
-    e.preventDefault();
-  });
-  window.addEventListener('mousemove', e => {
-    if (!isDragging) return;
-    let newX = menuStartX + (e.clientX - dragStartX);
-    let newY = menuStartY + (e.clientY - dragStartY);
-    const maxX = window.innerWidth - menu.offsetWidth - 10;
-    const maxY = window.innerHeight - menu.offsetHeight - 10;
-    newX = Math.max(0, Math.min(maxX, newX));
-    newY = Math.max(0, Math.min(maxY, newY));
-    menu.style.right = 'auto';
-    menu.style.left = `${newX}px`;
-    menu.style.top = `${newY}px`;
-  });
-  window.addEventListener('mouseup', () => { isDragging = false; });
-
-  // === Mutation observer ===
-  const observer = new MutationObserver(updateList);
-  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-  updateList();
-
-  // === Dark mode shadow ===
-  const html = document.documentElement;
-  const updateShadow = () => {
-    if (html.classList.contains('dark')) {
-      menu.style.boxShadow = '0 0 10px white';
-      header.style.boxShadow = '0 0 6px white';
-    } else {
-      menu.style.boxShadow = '0 0 10px black';
-      header.style.boxShadow = '';
-    }
-  };
-  updateShadow();
-  const htmlObserver = new MutationObserver(updateShadow);
-  htmlObserver.observe(html, { attributes: true, attributeFilter: ['class'] });
-
-  // === Balloon element ===
-  const balloon = document.createElement('div');
-  balloon.id = 'snirBalloon';
-  balloon.textContent = 'Snir Elgabsi';
-  document.body.appendChild(balloon);
-
-  let hideBalloonTimeout;
-  title.addEventListener('dblclick', () => {
-    const rect = title.getBoundingClientRect();
-    balloon.style.left = `${rect.left + rect.width / 2}px`;
-    balloon.style.top = `${rect.top - 30}px`;
-    balloon.style.opacity = '1';
-    balloon.classList.add('bounce');
-    setTimeout(() => balloon.classList.remove('bounce'), 600);
-    clearTimeout(hideBalloonTimeout);
-    hideBalloonTimeout = setTimeout(() => { balloon.style.opacity = '0'; }, 3000);
-  });
-  balloon.addEventListener('click', () => {
-    window.open('https://snir.blogspot.com', '_blank');
-  });
-
+    /** --- התחלה --- */
+    currentChatRoot = getCurrentChatRoot();
+    updatePostsList(true);
 })();
