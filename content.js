@@ -33,25 +33,26 @@
         }
         #floatingMenuTitle { flex-grow: 1; }
         #floatingMenuControls { display: flex; align-items: center; }
-        #floatingMenuControls > button:not(.keyboard-toggle) {
+         button:not(.keyboard-toggle) {
             cursor: pointer; color: white; margin-left: 6px;
             font-weight: bold; user-select: none;
             background: none; border: none;
             font-size: 16px; line-height: 1; padding: 0;
             display: flex; align-items: center; justify-content: center;
         }
-        #floatingMenuControls > .keyboard-toggle {
+         .keyboard-toggle {
             cursor: pointer; color: white; font-size: 16px;
             line-height: 1; padding: 4px 6px; border-radius: 4px;
             transition: background 0.3s ease; margin-left: 6px;
         }
-        #floatingMenuControls > .keyboard-toggle.on { background: #2ecc71; }
-        #floatingMenuControls > .keyboard-toggle.off { background: #7f8c8d; }
+         .keyboard-toggle.on { background: #2ecc71; }
+         .keyboard-toggle.off { background: #7f8c8d; }
 
         #searchInput {
             margin: 3px 10px; padding: 5px 8px; border-radius: 4px;
             border: none; font-size: 14px; width: calc(100% - 20px);
             box-sizing: border-box; direction: rtl;
+            color: black;
         }
         #floatingMenuList {
             padding: 5px 10px;
@@ -119,7 +120,7 @@
 
     controls.appendChild(collapseButton);
     controls.appendChild(closeButton);
-    controls.appendChild(keyboardToggleButton);
+    header.appendChild(keyboardToggleButton);
 
     header.appendChild(title);
     header.appendChild(controls);
@@ -178,52 +179,60 @@
         postElement.style.backgroundColor = 'yellow';
         setTimeout(() => postElement.style.backgroundColor = '', 1500);
     }
+let previousPostsJSON = '';
 
-    /** --- בניית רשימת פוסטים --- */
-    function updatePostsList(focusLast = false) {
-        const searchTerm = searchInput.value.trim().toLowerCase();
-        const allPosts = getPosts();
+function updatePostsList(focusLast = false) {
+    const posts = getPosts();
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    const filteredPosts = posts.filter(p => p.text.toLowerCase().includes(searchTerm));
 
-        postsListContainer.classList.add('fade');
-        setTimeout(() => {
-            postsListContainer.innerHTML = '';
-            const filteredPosts = allPosts.filter(p => p.text.toLowerCase().includes(searchTerm));
-            postsListContainer.classList.toggle('scrollable', filteredPosts.length > 10);
+    // השוואה למצב קודם
+    const currentPostsJSON = JSON.stringify(filteredPosts.map(p => p.text));
+    if (currentPostsJSON === previousPostsJSON) return;
+    previousPostsJSON = currentPostsJSON;
 
-            if (!filteredPosts.length) {
-                const noResultElement = document.createElement('div');
-                noResultElement.textContent = 'לא נמצאו פוסטים';
-                noResultElement.style.textAlign = 'center';
-                noResultElement.style.opacity = '0.7';
-                postsListContainer.appendChild(noResultElement);
-            } else {
-                filteredPosts.forEach(({ element, text }, i) => {
-                    const postItem = document.createElement('div');
-                    postItem.innerHTML = highlightText(text, searchTerm);
-                    postItem.style.textAlign = isHebrew(text[0]) ? 'right' : 'left';
-                    postItem.style.direction = isHebrew(text[0]) ? 'rtl' : 'ltr';
-                    postItem.addEventListener('click', () => {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        highlightPost(element);
-                        activePostIndex = i;
-                        updateActiveClass(postsListContainer.querySelectorAll('div'));
-                    });
-                    postsListContainer.appendChild(postItem);
-                });
-            }
+    // עדכון כותרת
+    title.textContent = filteredPosts.length === 0 ? 'לא נמצאו פוסטים' : 'פוסטים';
+    const firstChar = title.textContent.trim().charAt(0);
+    title.style.direction = isHebrew(firstChar) ? 'rtl' : 'ltr';
 
-            activePostIndex = focusLast && filteredPosts.length > 0 ? filteredPosts.length - 1 : 0;
-            updateActiveClass(postsListContainer.querySelectorAll('div'));
-        }, 150);
-        setTimeout(() => postsListContainer.classList.remove('fade'), 250);
+    // ניקוי ולבניית רשימה
+    postsListContainer.innerHTML = '';
+    postsListContainer.classList.toggle('scrollable', filteredPosts.length > 10);
+
+    if (filteredPosts.length === 0) {
+        const noResultElement = document.createElement('div');
+        noResultElement.textContent = 'לא נמצאו פוסטים';
+        noResultElement.style.textAlign = 'center';
+        noResultElement.style.opacity = '0.7';
+        postsListContainer.appendChild(noResultElement);
+    } else {
+        filteredPosts.forEach(({ element, text }, i) => {
+            const postItem = document.createElement('div');
+            postItem.innerHTML = highlightText(text, searchTerm);
+            postItem.style.textAlign = isHebrew(text[0]) ? 'right' : 'left';
+            postItem.style.direction = isHebrew(text[0]) ? 'rtl' : 'ltr';
+            postItem.addEventListener('click', () => {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                highlightPost(element);
+                activePostIndex = i;
+                updateActiveClass(postsListContainer.querySelectorAll('div'));
+            });
+            postsListContainer.appendChild(postItem);
+        });
     }
 
+    activePostIndex = focusLast && filteredPosts.length > 0 ? filteredPosts.length - 1 : 0;
+    updateActiveClass(postsListContainer.querySelectorAll('div'));
+}
+
     /** --- עדכון לפי גלילה --- */
-    function updateActivePost() {
-        const allPosts = getPosts();
+    function updateActivePost() {debugger;
+        const posts = getPosts();
         const searchTerm = searchInput.value.trim().toLowerCase();
-        const filteredPosts = allPosts.filter(p => p.text.toLowerCase().includes(searchTerm));
-        if (!filteredPosts.length) return;
+        const filteredPosts = posts.filter(p => p.text.toLowerCase().includes(searchTerm));
+        if (!filteredPosts.length) 
+            return;
 
         const viewportMiddle = window.innerHeight / 2;
         let closestIndex = -1;
@@ -233,7 +242,8 @@
             const distance = Math.abs(rect.top + rect.height / 2 - viewportMiddle);
             if (distance < minDistance) { minDistance = distance; closestIndex = index; }
         });
-        if (closestIndex === -1) return;
+        if (closestIndex === -1) 
+            return;
         activePostIndex = closestIndex;
         const postItems = postsListContainer.querySelectorAll('div');
         updateActiveClass(postItems);
@@ -307,15 +317,9 @@
     window.addEventListener('mouseup', () => isDragging = false);
 
     /** --- האזנה לשינוי צ'אט --- */
-    const chatObserver = new MutationObserver(() => {
-        const chatRoot = getCurrentChatRoot();
-        if (chatRoot !== currentChatRoot) {
-            currentChatRoot = chatRoot;
-            setTimeout(() => updatePostsList(true), 400);
-        }
-    });
-    chatObserver.observe(document.body, { childList: true, subtree: true });
-
+    const observer = new MutationObserver(updatePostsList);
+    observer.observe(document.body, { childList: true, subtree: true });
+    
     /** --- התחלה --- */
     currentChatRoot = getCurrentChatRoot();
     updatePostsList(true);
